@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pérdidas de Carga en Tuberías</title>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+    <style>
+        /* ────────────────────────────────────────────────────────────
+           RESET / BASE
+           ──────────────────────────────────────────────────────────── */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f0f2f5;
+            color: #333;
+            padding: 16px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #1a1a2e;
+            margin-bottom: 16px;
+            font-size: 1.5rem;
+        }
+
+        /* ────────────────────────────────────────────────────────────
+           GRID PRINCIPAL (3 COLUMNAS)
+           ──────────────────────────────────────────────────────────── */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 280px 1fr 1.1fr;
+            gap: 16px;
+            align-items: start;
+        }
+
+        /* ─── PANEL GENÉRICO ─── */
+        .panel {
+            background: #fff;
+            border-radius: 10px;
+            padding: 16px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.07);
+        }
+        .panel h2 {
+            font-size: 1rem;
+            color: #1a1a2e;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 6px;
+            margin-bottom: 12px;
+        }
+
+        /* ────────────────────────────────────────────────────────────
+           COLUMNA IZQUIERDA — DATOS FIJOS
+           ──────────────────────────────────────────────────────────── */
+        .col-datos { position: relative; }
+
+        .form-row {
+            margin-bottom: 10px;
+        }
+        .form-row label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-bottom: 2px;
+            color: #555;
+        }
+        .form-row input,
+        .form-row select {
+            width: 100%;
+            padding: 7px 8px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            transition: border-color 0.2s;
+        }
+        .form-row input:focus,
+        .form-row select:focus {
+            outline: none;
+            border-color: #4a6cf7;
+            box-shadow: 0 0 0 2px rgba(74,108,247,0.15);
+        }
+        .form-row input.error,
+        .form-row select.error {
+            border-color: #e74c3c;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .btn-group button {
+            flex: 1;
+        }
+
+        .btn {
+            padding: 9px 12px;
+            border: none;
+            border-radius: 7px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.12s, box-shadow 0.12s;
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4a6cf7, #3b5de7);
+            color: #fff;
+        }
+        .btn-primary:hover:not(:disabled) {
+            box-shadow: 0 3px 10px rgba(74,108,247,0.35);
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+        .btn-secondary:hover:not(:disabled) {
+            background: #d0d0d0;
+        }
+
+        .error-msg {
+            color: #e74c3c;
+            font-size: 0.78rem;
+            margin-top: 8px;
+            display: none;
+        }
+        .error-msg.visible { display: block; }
+
+        /* ────────────────────────────────────────────────────────────
+           COLUMNA CENTRAL — SEGMENTOS
+           ──────────────────────────────────────────────────────────── */
+        .seg-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .seg-header button {
+            padding: 6px 14px;
+            background: #4a6cf7;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .seg-header button:hover { background: #3b5de7; }
+
+        .seg-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .seg-item {
+            background: #f8f9fc;
+            border-radius: 8px;
+            padding: 10px 12px;
+            border: 1px solid #e4e7ef;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 8px;
+            align-items: end;
+        }
+        .seg-item .field {
+            display: flex;
+            flex-direction: column;
+        }
+        .seg-item .field label {
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: #777;
+            margin-bottom: 1px;
+        }
+        .seg-item .field input {
+            padding: 5px 6px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 0.82rem;
+            width: 100%;
+        }
+        .seg-item .field input.error { border-color: #e74c3c; }
+        .seg-item .field input:focus {
+            border-color: #4a6cf7;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(74,108,247,0.12);
+        }
+
+        .seg-item .btn-del {
+            background: #e74c3c;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            width: 32px;
+            height: 32px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s;
+            align-self: end;
+        }
+        .seg-item .btn-del:hover { background: #c0392b; }
+        .seg-item .btn-del:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .seg-item .seg-num {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #4a6cf7;
+            display: flex;
+            align-items: center;
+        }
+
+        /* ────────────────────────────────────────────────────────────
+           COLUMNA DERECHA — RESULTADOS
+           ──────────────────────────────────────────────────────────── */
+        .result-area {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.82rem;
+            line-height: 1.55;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            min-height: 200px;
+            max-height: 560px;
+            overflow-y: auto;
+            background: #fafbfc;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #e4e7ef;
+        }
+        .result-area.placeholder {
+            color: #aaa;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        .result-error {
+            color: #e74c3c;
+            font-weight: 500;
+        }
+
+        /* ────────────────────────────────────────────────────────────
+           OVERLAY DE CARGA
+           ──────────────────────────────────────────────────────────── */
+        #overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.45);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        #overlay.visible { display: flex; }
+        #overlay .card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 36px 44px;
+            text-align: center;
+            max-width: 400px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+        }
+        .spinner {
+            width: 44px;
+            height: 44px;
+            border: 5px solid #e0e0e0;
+            border-top-color: #4a6cf7;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #overlay .mensaje { font-size: 1rem; font-weight: 500; color: #333; }
+        #overlay .submensaje { font-size: 0.8rem; color: #888; margin-top: 6px; }
+
+        /* ────────────────────────────────────────────────────────────
+           RESPONSIVE
+           ──────────────────────────────────────────────────────────── */
+        @media (max-width: 900px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            .col-datos { position: static; }
+        }
+
+        @media (max-width: 500px) {
+            body { padding: 10px; }
+            h1 { font-size: 1.2rem; }
+            .seg-item {
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
+            }
+            .seg-item .seg-num { grid-column: 1 / -1; }
+            .seg-item .btn-del {
+                grid-column: 2;
+                justify-self: end;
+                width: 28px;
+                height: 28px;
+                font-size: 0.9rem;
+            }
+            #overlay .card { padding: 24px 16px; margin: 0 12px; }
+            .btn-group { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Pérdidas de Carga en Tuberías</h1>
+
+        <div class="main-grid">
+            <!-- ═══════════════ COLUMNA IZQUIERDA ═══════════════ -->
+            <div class="panel col-datos">
+                <h2>Datos del proyecto</h2>
+
+                <div class="form-row">
+                    <label for="titulo">Título del proyecto</label>
+                    <input type="text" id="titulo" placeholder="Nombre del proyecto…">
+                </div>
+
+                <div class="form-row">
+                    <label for="Q">Caudal Q (m³/s)</label>
+                    <input type="number" id="Q" value="0.05" step="any" min="0.0001">
+                </div>
+
+                <div class="form-row">
+                    <label for="metodo">Método</label>
+                    <select id="metodo">
+                        <option value="Darcy-Weisbach">Darcy-Weisbach</option>
+                        <option value="Hazen-Williams">Hazen-Williams</option>
+                        <option value="Manning">Manning</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <label for="k_entrada">K entrada</label>
+                    <input type="number" id="k_entrada" value="0.5" step="any" min="0">
+                </div>
+
+                <div class="form-row">
+                    <label for="k_salida">K salida</label>
+                    <input type="number" id="k_salida" value="1.0" step="any" min="0">
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-primary" id="btnCalcular" onclick="calcular()">⚙ Calcular</button>
+                    <button class="btn btn-secondary" onclick="limpiar()">✖ Limpiar</button>
+                </div>
+
+                <div class="error-msg" id="errorMsg"></div>
+            </div>
+
+            <!-- ═══════════════ COLUMNA CENTRAL ═══════════════ -->
+            <div class="panel col-segmentos">
+                <div class="seg-header">
+                    <h2 style="margin:0; border:none; padding:0;">Segmentos</h2>
+                    <button onclick="agregarSegmento()">+ Agregar segmento</button>
+                </div>
+                <div class="seg-list" id="segList"></div>
+            </div>
+
+            <!-- ═══════════════ COLUMNA DERECHA ═══════════════ -->
+            <div class="panel col-resultados">
+                <h2>Resultados</h2>
+                <div class="result-area placeholder" id="resultArea">
+                    Presione "Calcular" para ejecutar la simulación.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- OVERLAY -->
+    <div id="overlay">
+        <div class="card">
+            <div class="spinner"></div>
+            <div class="mensaje" id="overlayMensaje">Preparando...</div>
+            <div class="submensaje" id="overlaySubmensaje"></div>
+        </div>
+    </div>
+
+    <script>
+        // ════════════════════════════════════════════════════════════════
+        //  ESTADO GLOBAL
+        // ════════════════════════════════════════════════════════════════
+        let pyodide = null;
+        let pyodideReady = false;
+        let pyodideLoading = false;
+        let segCounter = 0;
+
+        // ════════════════════════════════════════════════════════════════
+        //  ETIQUETAS DE COEFICIENTE SEGÚN MÉTODO
+        // ════════════════════════════════════════════════════════════════
+        const METODO_COEF_LABELS = {
+            "Darcy-Weisbach": "k (mm)",
+            "Hazen-Williams": "C",
+            "Manning":        "n",
+        };
+        const METODO_COEF_DEFAULTS = {
+            "Darcy-Weisbach": "0.25",
+            "Hazen-Williams": "120",
+            "Manning":        "0.013",
+        };
+
+        // ════════════════════════════════════════════════════════════════
+        //  OVERLAY
+        // ════════════════════════════════════════════════════════════════
+        function mostrarOverlay(mensaje, submensaje) {
+            document.getElementById('overlayMensaje').textContent = mensaje;
+            document.getElementById('overlaySubmensaje').textContent = submensaje || '';
+            document.getElementById('overlay').classList.add('visible');
+        }
+
+        function ocultarOverlay() {
+            document.getElementById('overlay').classList.remove('visible');
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //  MANEJO DINÁMICO DE SEGMENTOS
+        // ════════════════════════════════════════════════════════════════
+        function defaultSegData() {
+            const metodo = document.getElementById('metodo').value;
+            const coefDef = METODO_COEF_DEFAULTS[metodo] || "0.25";
+            return { L: "100", D: "0.3", coef: coefDef };
+        }
+
+        function coefLabel(metodo) {
+            return METODO_COEF_LABELS[metodo] || "k (mm)";
+        }
+
+        function agregarSegmento(data) {
+            if (!data) data = defaultSegData();
+            segCounter++;
+            const idx = segCounter;
+
+            const div = document.createElement('div');
+            div.className = 'seg-item';
+            div.dataset.idx = idx;
+
+            const metodo = document.getElementById('metodo').value;
+            const lbl = coefLabel(metodo);
+
+            div.innerHTML = `
+                <div class="seg-num">Segmento ${idx}</div>
+                <div class="field">
+                    <label>L (m)</label>
+                    <input type="number" class="inp-L" value="${data.L}" step="any" min="0.01">
+                </div>
+                <div class="field">
+                    <label>D (m)</label>
+                    <input type="number" class="inp-D" value="${data.D}" step="any" min="0.001">
+                </div>
+                <div class="field">
+                    <label class="lbl-coef">${lbl}</label>
+                    <input type="number" class="inp-coef" value="${data.coef}" step="any" min="0.0001">
+                </div>
+                <button class="btn-del" onclick="eliminarSegmento(this)" title="Eliminar segmento">✕</button>
+            `;
+
+            document.getElementById('segList').appendChild(div);
+        }
+
+        function eliminarSegmento(btn) {
+            const item = btn.closest('.seg-item');
+            if (document.querySelectorAll('.seg-item').length <= 1) return; // mínimo 1
+            item.remove();
+            renumerarSegmentos();
+        }
+
+        function renumerarSegmentos() {
+            const items = document.querySelectorAll('.seg-item');
+            items.forEach((item, i) => {
+                const num = item.querySelector('.seg-num');
+                if (num) num.textContent = `Segmento ${i + 1}`;
+            });
+        }
+
+        function actualizarLabelsCoeficiente() {
+            const metodo = document.getElementById('metodo').value;
+            const lbl = coefLabel(metodo);
+            document.querySelectorAll('.seg-item .lbl-coef').forEach(el => {
+                el.textContent = lbl;
+            });
+        }
+
+        // ─── Escuchar cambio de método ───
+        document.getElementById('metodo').addEventListener('change', function() {
+            actualizarLabelsCoeficiente();
+        });
+
+        // ════════════════════════════════════════════════════════════════
+        //  OBTENER DATOS DEL FORMULARIO
+        // ════════════════════════════════════════════════════════════════
+        function obtenerParametros() {
+            const errores = [];
+
+            const titulo = document.getElementById('titulo').value.trim() || "—";
+            const Q = parseFloat(document.getElementById('Q').value);
+            const metodo = document.getElementById('metodo').value;
+            const k_entrada = parseFloat(document.getElementById('k_entrada').value);
+            const k_salida = parseFloat(document.getElementById('k_salida').value);
+
+            // Validar datos fijos
+            if (isNaN(Q) || Q <= 0) {
+                errores.push("Caudal Q debe ser > 0");
+                document.getElementById('Q').classList.add('error');
+            } else {
+                document.getElementById('Q').classList.remove('error');
+            }
+
+            if (isNaN(k_entrada) || k_entrada < 0) {
+                errores.push("K entrada debe ser >= 0");
+                document.getElementById('k_entrada').classList.add('error');
+            } else {
+                document.getElementById('k_entrada').classList.remove('error');
+            }
+
+            if (isNaN(k_salida) || k_salida < 0) {
+                errores.push("K salida debe ser >= 0");
+                document.getElementById('k_salida').classList.add('error');
+            } else {
+                document.getElementById('k_salida').classList.remove('error');
+            }
+
+            // Obtener segmentos
+            const segmentos = [];
+            const segItems = document.querySelectorAll('.seg-item');
+            if (segItems.length === 0) {
+                errores.push("Debe haber al menos un segmento.");
+                return { params: null, errores };
+            }
+
+            let segOk = true;
+            segItems.forEach((item, i) => {
+                const L = parseFloat(item.querySelector('.inp-L').value);
+                const D = parseFloat(item.querySelector('.inp-D').value);
+                const coef = parseFloat(item.querySelector('.inp-coef').value);
+
+                const inpL = item.querySelector('.inp-L');
+                const inpD = item.querySelector('.inp-D');
+                const inpC = item.querySelector('.inp-coef');
+
+                inpL.classList.remove('error');
+                inpD.classList.remove('error');
+                inpC.classList.remove('error');
+
+                let valid = true;
+                if (isNaN(L) || L <= 0) { errores.push(`Seg. ${i+1}: L debe ser > 0`); inpL.classList.add('error'); valid = false; }
+                if (isNaN(D) || D <= 0) { errores.push(`Seg. ${i+1}: D debe ser > 0`); inpD.classList.add('error'); valid = false; }
+                if (isNaN(coef) || coef <= 0) { errores.push(`Seg. ${i+1}: coeficiente debe ser > 0`); inpC.classList.add('error'); valid = false; }
+
+                if (valid) {
+                    segmentos.push({ L, D, coef });
+                } else {
+                    segOk = false;
+                }
+            });
+
+            if (!segOk) {
+                return { params: null, errores };
+            }
+
+            const params = {
+                titulo,
+                Q,
+                metodo,
+                k_entrada,
+                k_salida,
+                segmentos,
+            };
+
+            return { params, errores };
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //  LIMPIAR
+        // ════════════════════════════════════════════════════════════════
+        function limpiar() {
+            document.getElementById('titulo').value = '';
+            document.getElementById('Q').value = '0.05';
+            document.getElementById('metodo').value = 'Darcy-Weisbach';
+            document.getElementById('k_entrada').value = '0.5';
+            document.getElementById('k_salida').value = '1.0';
+
+            // Limpiar segmentos (dejar 1 con valores por defecto)
+            document.getElementById('segList').innerHTML = '';
+            segCounter = 0;
+            agregarSegmento({ L: "100", D: "0.3", coef: "0.25" });
+
+            document.getElementById('errorMsg').classList.remove('visible');
+            document.getElementById('errorMsg').textContent = '';
+            const ra = document.getElementById('resultArea');
+            ra.textContent = 'Presione "Calcular" para ejecutar la simulación.';
+            ra.className = 'result-area placeholder';
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //  CARGAR PYODIDE
+        // ════════════════════════════════════════════════════════════════
+        async function cargarPyodide() {
+            if (pyodideReady) return true;
+            if (pyodideLoading) {
+                while (!pyodideReady) await new Promise(r => setTimeout(r, 200));
+                return true;
+            }
+
+            pyodideLoading = true;
+            mostrarOverlay('Cargando Pyodide...', 'Descargando el motor de Python para el navegador');
+
+            try {
+                pyodide = await loadPyodide({
+                    indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/'
+                });
+
+                // Solo biblioteca estándar — numpy/scipy NO son necesarios
+                // (math, dataclasses, typing ya vienen incluidos)
+
+                mostrarOverlay('Cargando módulos...', 'calculos.py y web_main.py');
+
+                const respCalculos = await fetch('calculos.py');
+                if (!respCalculos.ok) throw new Error('No se pudo descargar calculos.py');
+                pyodide.FS.writeFile('calculos.py', await respCalculos.text());
+
+                const respWebMain = await fetch('web_main.py');
+                if (!respWebMain.ok) throw new Error('No se pudo descargar web_main.py');
+                pyodide.FS.writeFile('web_main.py', await respWebMain.text());
+
+                pyodideReady = true;
+                ocultarOverlay();
+                return true;
+            } catch (err) {
+                ocultarOverlay();
+                document.getElementById('errorMsg').textContent = 'Error al cargar Pyodide: ' + err.message;
+                document.getElementById('errorMsg').classList.add('visible');
+                pyodideLoading = false;
+                return false;
+            }
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //  CALCULAR
+        // ════════════════════════════════════════════════════════════════
+        async function calcular() {
+            const errorMsg = document.getElementById('errorMsg');
+            errorMsg.classList.remove('visible');
+            errorMsg.textContent = '';
+
+            const { params, errores } = obtenerParametros();
+            if (errores.length > 0) {
+                errorMsg.textContent = 'Errores: ' + errores.join('; ');
+                errorMsg.classList.add('visible');
+                return;
+            }
+
+            const btn = document.getElementById('btnCalcular');
+            btn.disabled = true;
+
+            mostrarOverlay('Preparando...', 'Inicializando Pyodide');
+            const ok = await cargarPyodide();
+            if (!ok) {
+                btn.disabled = false;
+                return;
+            }
+
+            try {
+                mostrarOverlay('Calculando...', 'Ejecutando simulación');
+
+                // Escapar comillas simples en strings para pasarlos a Python
+                const paramsJSON = JSON.stringify(params);
+                // Envolver en runPython: cargar web_main, pasar params, obtener resultado
+                const resultadoJSON = pyodide.runPython(`
+                    import json
+                    import web_main
+                    params = json.loads('${paramsJSON.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')
+                    result = web_main.ejecutar_simulacion(params)
+                    json.dumps(result)
+                `);
+                const resultado = JSON.parse(resultadoJSON);
+
+                ocultarOverlay();
+
+                if (!resultado.exito) {
+                    const ra = document.getElementById('resultArea');
+                    ra.textContent = '⚠ Error: ' + resultado.error;
+                    ra.className = 'result-area result-error';
+                    btn.disabled = false;
+                    return;
+                }
+
+                // Mostrar resultados
+                const ra = document.getElementById('resultArea');
+                ra.textContent = resultado.resultado_texto;
+                ra.className = 'result-area';
+
+            } catch (err) {
+                ocultarOverlay();
+                errorMsg.textContent = 'Error inesperado: ' + err.message;
+                errorMsg.classList.add('visible');
+            }
+
+            btn.disabled = false;
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //  INICIALIZACIÓN
+        // ════════════════════════════════════════════════════════════════
+        document.addEventListener('DOMContentLoaded', function() {
+            // Agregar primer segmento por defecto
+            agregarSegmento({ L: "100", D: "0.3", coef: "0.25" });
+        });
+
+        // Permitir Enter para calcular
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                calcular();
+            }
+        });
+    </script>
+</body>
+</html>
