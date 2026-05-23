@@ -16,11 +16,21 @@ Los segmentos se agregan/eliminan dinámicamente. Al cambiar el método, la etiq
 
 - **Métodos soportados:** Darcy-Weisbach (Swamee-Jain), Hazen-Williams, Manning
 - **Segmentos dinámicos:** agregar o eliminar tramos de tubería sin límite práctico
-- **Pérdidas localizadas:** coeficientes K de entrada y salida
-- **Resultados:** pérdida por fricción total, pérdidas localizadas, pérdida total, potencia perdida
+- **Pérdidas localizadas:** coeficientes K de entrada (primer segmento) y salida (último segmento)
+- **Resultados:** pérdida por fricción total, pérdidas localizadas, pérdida total, potencia perdida (kW o MW)
 - **Validación de entrada:** resalta campos inválidos y muestra errores descriptivos
 - **Responsive:** funciona en móviles y escritorio (columnas se apilan en pantallas pequeñas)
 - **Sin servidor:** todo corre en el navegador usando Pyodide (Python compilado a WebAssembly)
+
+## Coeficientes por método
+
+Cada método utiliza un parámetro de fricción distinto:
+
+| Método            | Parámetro | Descripción                         |
+|-------------------|-----------|-------------------------------------|
+| Darcy-Weisbach    | `k` (mm)  | Rugosidad absoluta de la tubería    |
+| Hazen-Williams    | `C`       | Coeficiente de rugosidad (adim.)    |
+| Manning           | `n`       | Coeficiente de Manning (adim.)      |
 
 ## Tecnologías
 
@@ -35,6 +45,7 @@ perdida-de-carga-tuberias/
 ├── index.html       # Página web principal
 ├── web_main.py      # Módulo Python que orquesta la simulación
 ├── calculos.py      # Lógica hidráulica (fricción, pérdidas, modelos)
+├── .gitignore
 ├── LICENSE
 └── README.md
 ```
@@ -52,10 +63,10 @@ perdida-de-carga-tuberias/
 1. Ingresa el título del proyecto y el caudal (m³/s).
 2. Selecciona el método de cálculo.
 3. Ajusta los coeficientes K de entrada y salida.
-4. Agrega los segmentos de tubería (longitud L, diámetro D, coeficiente de fricción).
+4. Agrega los segmentos de tubería (longitud L, diámetro D y el coeficiente correspondiente al método elegido).
 5. Presiona **Calcular**.
 6. Los resultados se muestran al instante en el panel derecho (sin recargar la página).
 
 ## Licencia
 
-Este proyecto está bajo la licencia MIT. Consulta el archivo [LICENSE](LICENSE) para más detalles.
+Este proyecto está bajo la licencia **MIT**. Consulta el archivo [LICENSE](LICENSE) para más detalles.
