@@ -623,15 +623,15 @@
                 // Solo biblioteca estándar — numpy/scipy NO son necesarios
                 // (math, dataclasses, typing ya vienen incluidos)
 
-                mostrarOverlay('Cargando módulos...', 'calculos.py y web_main.py');
+                mostrarOverlay('Cargando módulos...', 'calculos.py y web_bridge.py');
 
                 const respCalculos = await fetch('calculos.py');
                 if (!respCalculos.ok) throw new Error('No se pudo descargar calculos.py');
                 pyodide.FS.writeFile('calculos.py', await respCalculos.text());
 
-                const respWebMain = await fetch('web_main.py');
-                if (!respWebMain.ok) throw new Error('No se pudo descargar web_main.py');
-                pyodide.FS.writeFile('web_main.py', await respWebMain.text());
+                const respWebMain = await fetch('web_bridge.py');
+                if (!respWebMain.ok) throw new Error('No se pudo descargar web_bridge.py');
+                pyodide.FS.writeFile('web_bridge.py', await respWebMain.text());
 
                 pyodideReady = true;
                 ocultarOverlay();
@@ -675,12 +675,12 @@
 
                 // Escapar comillas simples en strings para pasarlos a Python
                 const paramsJSON = JSON.stringify(params);
-                // Envolver en runPython: cargar web_main, pasar params, obtener resultado
+                // Envolver en runPython: cargar web_bridge, pasar params, obtener resultado
                 const resultadoJSON = pyodide.runPython(`
                     import json
-                    import web_main
+                    import web_bridge
                     params = json.loads('${paramsJSON.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')
-                    result = web_main.ejecutar_simulacion(params)
+                    result = web_bridge.ejecutar_simulacion(params)
                     json.dumps(result)
                 `);
                 const resultado = JSON.parse(resultadoJSON);

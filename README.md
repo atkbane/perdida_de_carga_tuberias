@@ -14,6 +14,22 @@ Abre la aplicación directamente desde el navegador, sin instalación:
 
 ---
 
+## 🖥️ Versión escritorio
+
+Para ejecutar la aplicación localmente en tu computadora (requiere Python y PySide6):
+
+```bash
+# Instalar dependencias (se recomienda un entorno virtual)
+pip install pyside6
+
+# Ejecutar
+python run_desktop.py
+```
+
+La interfaz de escritorio ofrece la misma funcionalidad que la versión web, con la ventaja de ejecutarse sin conexión a internet.
+
+---
+
 ## 📐 Base teórica
 
 ### Fórmulas principales
@@ -64,9 +80,11 @@ El factor de fricción `f` de Darcy‑Weisbach se calcula con la aproximación e
 
 ```
 perdida_de_carga_tuberias/
-├── calculos.py      # Lógica hidráulica (fricción, pérdidas, modelos)
-├── web_main.py      # Puente Python/Pyodide para la web
-├── index.html       # Interfaz web
+├── calculos.py       # Lógica hidráulica (fricción, pérdidas, modelos)
+├── interfaz.py       # Interfaz gráfica de escritorio (PySide6)
+├── run_desktop.py    # Punto de entrada para la versión de escritorio
+├── web_bridge.py     # Puente Python/Pyodide para la versión web
+├── index.html        # Interfaz web
 ├── .gitignore
 ├── LICENSE
 └── README.md
